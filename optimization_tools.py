@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 
 from xfoil_module import output_reader
 
-def plot_generations(filename, cost = None, g = None, output_constrained = ['EigenValue', ['Weight','Lift']],
+def plot_generations(filename, cost = None, g = None, p = None,
+                     output_constrained = ['EigenValue', ['Weight','Lift']],
                      outputs_plotted = ['Weight', 'Velocity'], source = 'raw',
                      units = ['N','m/s'], n_generation = 20,
                      last_best = True, color_scheme = 'individual', 
@@ -19,6 +20,8 @@ def plot_generations(filename, cost = None, g = None, output_constrained = ['Eig
     :param filename: name of file to read
     :param cost: function that calculates the cost, if not defined and
            'best' used, it is the minimum value in outputs_plotted
+    :param g: constraint function
+    :param p: processing function(eg. convert units after constraints)
     :param output_constrained: Outputs that will be constrained by g
     :param outputs_plotted: The two outputs in the axis of the scatter 
             plot. If only one is defined, the x axis is considered the
@@ -98,7 +101,12 @@ def plot_generations(filename, cost = None, g = None, output_constrained = ['Eig
                 for key in pullData:
                         pullData[key].remove(None)
         
-                    
+    # Processing
+    if p != None:
+        for k in range(len(outputs_plotted)):
+            for i in range(len(pullData[outputs_plotted[k]])):
+                pullData[outputs_plotted[k]][i] = p[k](pullData[outputs_plotted[k]][i])
+                
     plt.colors()
     
     generation = pullData['Generation']
@@ -114,6 +122,7 @@ def plot_generations(filename, cost = None, g = None, output_constrained = ['Eig
         plt.xlim(0.5, n_generation + 0.5)
 
     if plot_type == 'best' or plot_type == 'all and best':
+        global_min = 9999.
         cost_list = []
         generation_list = []
         if cost == None:
@@ -122,7 +131,9 @@ def plot_generations(filename, cost = None, g = None, output_constrained = ['Eig
                 for i in range(len(generation)):
                     if generation[i] == j and y[i] < current_min:
                         current_min = y[i]
-                cost_list.append(current_min)
+                if current_min < global_min:
+                    global_min = current_min
+                cost_list.append(global_min)
                 generation_list.append(j)
         plt.plot(generation_list, cost_list, '-o')
         plt.xlim(0.5, n_generation + 0.5)
@@ -146,22 +157,34 @@ def plot_generations(filename, cost = None, g = None, output_constrained = ['Eig
     
 
     plt.grid()
-    if units == None:
-        units = ['','']
         
     if len(outputs_plotted) == 2:
         if output_labels == None:
-            plt.xlabel(outputs_plotted[0] + ' (' + units[0] + ')')
-            plt.ylabel(outputs_plotted[1] + ' (' + units[1] + ')')
+            if units != None:
+                plt.xlabel(outputs_plotted[0] + ' (' + units[0] + ')')
+                plt.ylabel(outputs_plotted[1] + ' (' + units[1] + ')')
+            else:
+                plt.xlabel(outputs_plotted[0])
+                plt.ylabel(outputs_plotted[1])               
         else:
-            plt.xlabel(output_labels[0] + ' (' + units[0] + ')')
-            plt.ylabel(output_labels[1] + ' (' + units[1] + ')')            
+            if units != None:
+                plt.xlabel(output_labels[0] + ' (' + units[0] + ')')
+                plt.ylabel(output_labels[1] + ' (' + units[1] + ')')   
+            else:
+                plt.xlabel(output_labels[0])
+                plt.ylabel(output_labels[1])                  
     else:
         plt.xlabel('Iteration number')
         if output_labels == None:
-            plt.ylabel(outputs_plotted[0] + ' (' + units[0] + ')')
+            if units != None:
+                plt.ylabel(outputs_plotted[0] + ' (' + units[0] + ')')
+            else:
+                plt.ylabel(outputs_plotted[0])
         else:
-            plt.ylabel(output_labels[0] + ' (' + units[0] + ')') 
+            if units != None:
+                plt.ylabel(output_labels[0] + ' (' + units[0] + ')')
+            else:
+                plt.ylabel(output_labels[0])
 if __name__ == "__main__":
     filename = "Results.txt"
 
