@@ -7,7 +7,7 @@ Created on Fri Jul 24 18:36:06 2015
 import pickle
 import time
 
-import xfoil_tools as xf
+import xfoil_module as xf
 
 try:
     from template import Wing_model
@@ -166,7 +166,14 @@ class DOE:
                         self.influences[output_name][-1] += Y[index]/count
 
     if not in_Abaqus:
-        def plot(self, shadow = [], xlabel = None, ylabel = None):
+        def plot(self, shadow = [], xlabel = None, ylabel = None,
+                 number_y = 5, process = None):
+            """plots DOE just like in excel.
+            
+            :param process: dictionary with output_name of outputs to be
+            processed as keys and functions as the value of each key.
+            :param number_y: number of values on the y-axis for each
+            output."""
             import matplotlib.pyplot as plt
             
             def list_to_string(self, separator=', '):
@@ -231,13 +238,21 @@ class DOE:
             border_spacing = .2
             for output in self.output_names:
                 Y = self.influences[output]
+                if output != None:
+                    if output in process:
+                        for i in range(len(Y)):
+                            Y[i] = process[output](Y[i])
                 plt.subplot(100*len(self.output_names) + 11 + 
                             self.output_names.index(output))
          
                 # Creating dummy values for horizontal axis
                 xi = range((self.n_var+self.n_var_2) * self.levels)
-                # Define ticks
-                plt.xticks(xi, ticks)
+                # Define ticks for only last
+                if self.output_names[-1] == output:
+                    plt.xticks(xi, ticks)
+                else:
+                    frame = plt.gca()
+                    frame.axes.get_xaxis().set_visible(False)
 #                plt.fill_between(xi, min(Y) - 0.05*(max(Y)-min(Y)),
 #                                 max(Y) + 0.05*(max(Y)-min(Y)),
 #                                 where = self.equal_to_zero[output],color = '0.75')
@@ -252,13 +267,14 @@ class DOE:
                 plt.ylabel(ylabel[self.output_names.index(output)])
 #                plt.xlabel("Design Variables ("+list_to_string(self)+")")
             
-                if self.output_names.index(output) == 0:
-                    plt.title("Design of Experiment: %i level %s" %
-                              (self.levels, self.driver))
+#                if self.output_names.index(output) == 0:
+#                    plt.title("Design of Experiment: %i level %s" %
+#                              (self.levels, self.driver))
 
                 plt.xlim([-border_spacing, max(xi) + border_spacing])
                 plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)), 
                          max(Y) + 0.05*(max(Y)-min(Y)))
+                plt.locator_params(axis = 'y', nbins = number_y)
                 plt.grid()
                 plt.show()
 
@@ -270,7 +286,13 @@ class DOE:
                              xytext = (0, -25), xycoords='axes fraction',
                              textcoords='offset points', horizontalalignment='center',
                              verticalalignment='center')
-
+            for i in range(len(distances)-1):
+                for j in range(10):
+                    y = -2.5*(j+2)
+                    plt.annotate('|', xy =((distances[i] + distances[i+1])/2. , 0),
+                                 xytext = (0, y), xycoords='axes fraction',
+                                 textcoords='offset points', horizontalalignment='center',
+                                 verticalalignment='center')
         def plot_domain(self, Xaxis, Yaxis):
             """Plots all the points in a 2D plot for the definided Xaxis and 
             Yaxis
@@ -470,12 +492,15 @@ if __name__ == "__main__":
         
     problem.load(filename='FullFactorial.txt', 
                  variables_names= ['Al0', 'Al1'],
-                 outputs_names = ['Weight', 'Lift', 'Drag', 'MaxMises', 'DispTip', 'EigenValue', 'Velocity'])
+                 outputs_names = ['Weight', 'Lift', 'Drag', 'MaxMises', 'DispTip', 'EigenValue'])
     problem.find_influences(not_zero=True)
     problem.find_nadir_utopic(not_zero=True)
     print 'Nadir: ', problem.nadir
     print 'Utopic: ', problem.utopic
+    
+    convert_to_MPa = lambda x: x/1e6
     problem.plot(xlabel = ['$A_{l_0}$', '$A_{l_1}$'],
-                 ylabel = ['Weight(N)', 'Lift(N)', 'Drag(N)', 'MaxMises(Pa)',
-                           'Displacement(m)','Eigenvalue', 'Velocity(m/s)'])
+                 ylabel = ['Weight (N)', 'Lift (N)', 'Drag (N)', 'Max\nVonMises \n Stress (MPa)',
+                           'Trailing edge\nDisplace-\nment (m)','Buckling\nEigenvalue'],
+                 process = {"MaxMises":convert_to_MPa}, number_y = 5)
 #    print problem.influences
