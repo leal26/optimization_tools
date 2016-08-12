@@ -4,6 +4,7 @@ Created on Sun Jul 20 21:43:27 2014
 
 @author: pbc1877
 """
+import numpy as np
 import matplotlib.pyplot as plt
 
 from xfoil_module import output_reader
@@ -14,7 +15,7 @@ def plot_generations(filename, cost = None, g = None, p = None,
                      units = ['N','m/s'], n_generation = 20,
                      last_best = True, color_scheme = 'individual', 
                      optimizers = ['NSGA2','SNOPT'], plot_type = 'all',
-                     output_labels = None):
+                     output_labels = None, label_size = None):
     """
     
     :param filename: name of file to read
@@ -36,7 +37,8 @@ def plot_generations(filename, cost = None, g = None, p = None,
     :optimizers: list of optimizers (works for plot_type = 'best')
     :param plot_type: 'all' plots all individuals and 'best' plots only the
         best individuals (still does not work for multiobjective). 'all and best'
-        plots both together.
+        plots both together. 'number of evaluations' plots objective functions
+        versus number of objective function evaluations
     :param output_labels: if defined, defines the labels on the plot.
         Otherwise the outputs_plotted are used
     """
@@ -67,11 +69,12 @@ def plot_generations(filename, cost = None, g = None, p = None,
         pullData['Generation'] = []
         
         RandomKey = pullData.keys()[0] # Assumes all keys have item of same len
-        
+        if RandomKey == 'Generation':
+            RandomKey = pullData.keys()[1]
         population_size = len(pullData[RandomKey]) / n_generation
         for i in range(population_size, len(pullData[RandomKey])+population_size):
             pullData['Generation'].append( i/ population_size )
-        
+        print pullData['Generation'], population_size
         # If process is True, the values that violate the constrain will be 
         # deleted in all of the dictionaries of pullData
         if process:
@@ -111,7 +114,11 @@ def plot_generations(filename, cost = None, g = None, p = None,
     
     generation = pullData['Generation']
     x = pullData[outputs_plotted[0]]
-    if len(outputs_plotted) == 2:
+    if plot_type == 'number of evaluations' and source == 'raw':
+        x = np.array(pullData['Generation'])*population_size
+        y = pullData[outputs_plotted[0]]
+        plt.xlim(0.5, n_generation*population_size + 0.5)        
+    elif len(outputs_plotted) == 2:
         x = pullData[outputs_plotted[0]]
         y = pullData[outputs_plotted[1]]
         space = 0.02*(max(x) - min(x))
@@ -120,8 +127,10 @@ def plot_generations(filename, cost = None, g = None, p = None,
         x = pullData['Generation']
         y = pullData[outputs_plotted[0]]
         plt.xlim(0.5, n_generation + 0.5)
-
-    if plot_type == 'best' or plot_type == 'all and best':
+    print 'x ', x
+    print 'y ', y
+    if plot_type == 'best' or plot_type == 'all and best' or (
+        plot_type == 'number of evaluations' and source == 'raw'):
         global_min = 9999.
         cost_list = []
         generation_list = []
@@ -135,10 +144,14 @@ def plot_generations(filename, cost = None, g = None, p = None,
                     global_min = current_min
                 cost_list.append(global_min)
                 generation_list.append(j)
-        plt.plot(generation_list, cost_list, '-o')
-        plt.xlim(0.5, n_generation + 0.5)
+        if plot_type == 'number of evaluations' and source == 'raw':
+            plt.plot(np.array(generation_list)*population_size, cost_list, '-o')
+        else:
+            plt.plot(generation_list, cost_list, '-o')
+            plt.xlim(0.5, n_generation + 0.5)
         
-    if plot_type == 'all' or plot_type == 'all and best':
+    if (plot_type == 'all' or plot_type == 'all and best') or (
+        plot_type == 'number of evaluations' and source == 'raw'):
         for i in range(len(x)):
             if color_scheme == 'generation':
                 plt.scatter(x[i], y[i], color=((1.-float(generation[i])/n_generation, 
@@ -152,39 +165,79 @@ def plot_generations(filename, cost = None, g = None, p = None,
         
         if last_best:
             plt.scatter(x[-1], y[-1], marker = 's')
-            plt.plot()     
-
-    
+            plt.plot()         
 
     plt.grid()
-        
-    if len(outputs_plotted) == 2:
-        if output_labels == None:
-            if units != None:
-                plt.xlabel(outputs_plotted[0] + ' (' + units[0] + ')')
-                plt.ylabel(outputs_plotted[1] + ' (' + units[1] + ')')
+    
+    if label_size == None:
+        if len(outputs_plotted) == 2:
+            if output_labels == None:
+                if units != None:
+                    plt.xlabel(outputs_plotted[0] + ' (' + units[0] + ')')
+                    plt.ylabel(outputs_plotted[1] + ' (' + units[1] + ')')
+                else:
+                    plt.xlabel(outputs_plotted[0])
+                    plt.ylabel(outputs_plotted[1])               
             else:
-                plt.xlabel(outputs_plotted[0])
-                plt.ylabel(outputs_plotted[1])               
+                if units != None:
+                    plt.xlabel(output_labels[0] + ' (' + units[0] + ')')
+                    plt.ylabel(output_labels[1] + ' (' + units[1] + ')')   
+                else:
+                    plt.xlabel(output_labels[0])
+                    plt.ylabel(output_labels[1])                  
         else:
-            if units != None:
-                plt.xlabel(output_labels[0] + ' (' + units[0] + ')')
-                plt.ylabel(output_labels[1] + ' (' + units[1] + ')')   
+            plt.xlabel('Iteration number')
+            if output_labels == None:
+                if units != None:
+                    plt.ylabel(outputs_plotted[0] + ' (' + units[0] + ')')
+                else:
+                    plt.ylabel(outputs_plotted[0])
             else:
-                plt.xlabel(output_labels[0])
-                plt.ylabel(output_labels[1])                  
+                if units != None:
+                    plt.ylabel(output_labels[0] + ' (' + units[0] + ')')
+                else:
+                    plt.ylabel(output_labels[0])
     else:
-        plt.xlabel('Iteration number')
-        if output_labels == None:
-            if units != None:
-                plt.ylabel(outputs_plotted[0] + ' (' + units[0] + ')')
+        if len(outputs_plotted) == 2:
+            if output_labels == None:
+                if units != None:
+                    plt.xlabel(outputs_plotted[0] + ' (' + units[0] + ')',
+                               fontsize = label_size[0])
+                    plt.ylabel(outputs_plotted[1] + ' (' + units[1] + ')',
+                               fontsize = label_size[1])
+                else:
+                    plt.xlabel(outputs_plotted[0],
+                               fontsize = label_size[0])
+                    plt.ylabel(outputs_plotted[1],
+                               fontsize = label_size[1])               
             else:
-                plt.ylabel(outputs_plotted[0])
+                if units != None:
+                    plt.xlabel(output_labels[0] + ' (' + units[0] + ')',
+                               fontsize = label_size[0])
+                    plt.ylabel(output_labels[1] + ' (' + units[1] + ')',
+                               fontsize = label_size[1])   
+                else:
+                    plt.xlabel(output_labels[0], fontsize = label_size[0])
+                    plt.ylabel(output_labels[1], fontsize = label_size[1])                  
         else:
-            if units != None:
-                plt.ylabel(output_labels[0] + ' (' + units[0] + ')')
+            if plot_type == 'number of evaluations':
+                plt.xlabel('Number of objective function evaluations', fontsize = label_size[0])
             else:
-                plt.ylabel(output_labels[0])
+                plt.xlabel('Iteration number', fontsize = label_size[0])
+            if output_labels == None:
+                if units != None:
+                    plt.ylabel(outputs_plotted[0] + ' (' + units[0] + ')',
+                               fontsize = label_size[1])
+                else:
+                    plt.ylabel(outputs_plotted[0],
+                               fontsize = label_size[1])
+            else:
+                if units != None:
+                    plt.ylabel(output_labels[0] + ' (' + units[0] + ')',
+                               fontsize = label_size[1])
+                else:
+                    plt.ylabel(output_labels[0],
+                               fontsize = label_size[1])                    
 if __name__ == "__main__":
     filename = "Results.txt"
 
