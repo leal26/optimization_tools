@@ -8,33 +8,33 @@ import math
 import numpy as np
 # from scipy.optimize import differential_evolution
 
-# def hausdorff_distance_2D(a, b, rotation = False, rotation_pivot = False,
-                           # rotation_limits = [-math.pi/4., math.pi/4.]):
-    # """Comparing a vector data 'a' to a vector data 'b'."""
+def hausdorff_distance_2D(a, b, rotation = False, rotation_pivot = False,
+                           rotation_limits = [-math.pi/4., math.pi/4.]):
+    """Comparing a vector data 'a' to a vector data 'b'."""
 
-    # def find_d_rotated(beta):
-        # """Find Hausdorff distance considering a rigid body rotation."""
-        # for i in range(len(data['x'])):
-            # x = b['x'][i] - x_pivot
-            # y = b['y'][i] - y_pivot
-            # c_beta = math.cos(beta)
-            # s_beta = math.sin(beta)
-            # x_rotated = c_beta*x - s_beta*y + x_pivot
-            # y_rotated = s_beta*x + c_beta*y + y_pivot
-        # b_rotated = {'x': x_rotated, 'y': y_rotated}
-        # return find_d(a, b_rotated)
+    def find_d_rotated(beta):
+        """Find Hausdorff distance considering a rigid body rotation."""
+        for i in range(len(data['x'])):
+            x = b['x'][i] - x_pivot
+            y = b['y'][i] - y_pivot
+            c_beta = math.cos(beta)
+            s_beta = math.sin(beta)
+            x_rotated = c_beta*x - s_beta*y + x_pivot
+            y_rotated = s_beta*x + c_beta*y + y_pivot
+        b_rotated = {'x': x_rotated, 'y': y_rotated}
+        return find_d(a, b_rotated)
     
-    # if rotation == False and rotation_pivot == False:
-        # return find_d(a,b)
-    # else:
-        # # determine what is the leading edge and the rotation angle beta
-        # x_pivot = rotation_pivot[0]
-        # y_pivot = rotation_pivot[1]
+    if rotation == False and rotation_pivot == False:
+        return find_d(a,b)
+    else:
+        # determine what is the leading edge and the rotation angle beta
+        x_pivot = rotation_pivot[0]
+        y_pivot = rotation_pivot[1]
         
-        # beta_bounds = [0,-math.pi/4]
+        beta_bounds = [0,-math.pi/4]
         
-        # result = differential_evolution(find_d_rotated, beta_bounds)
-        # return result.fun
+        result = differential_evolution(find_d_rotated, beta_bounds)
+        return result.fun
         
 def find_d(a, b): 
     # It is assumed that a and b have the same keys with the same lengths
