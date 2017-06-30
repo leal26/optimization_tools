@@ -6,11 +6,12 @@ Created on Fri Jul 24 18:36:06 2015
 """
 import pickle
 import time
+import random
 
 import xfoil_module as xf
 
 try:
-    from template import Wing_model
+    from abaqus import *
     in_Abaqus = True
 except:
     in_Abaqus = False
@@ -20,13 +21,15 @@ if not in_Abaqus:
 
 class DOE:
     """Create a Design of Experiences Environment."""
-    def __init__(self, levels=5, driver='Taguchi'):
+    def __init__(self, levels=2, driver='Taguchi', store = False):
         self.levels = levels
         self.driver = driver
         # All variable will be defined through the add_variable method
         self.variables = []
         # For the influence method, we need a list of the names of all variables
         self.variables_names = []
+        # Variable to know if store  values in a txt
+        self.store = store
 
     def add_variable(self, name, lower, upper, levels=None, type=float):
         """Add variables to the DOE problem. """
@@ -40,11 +43,13 @@ class DOE:
         except:
             print 'Forgot to define upper, lower or name'
 
-    def define_points(self):
+    def define_points(self, runs=None):
         """
         Method to define the points to be evaluated based on the results from the
         distribution given by the array method and the bound defined by the
-        add_variable method"""
+        add_variable method.
+
+        For dummy, levels means nothing"""
         self.n_var = 0
         self.n_var_2 = 0
 
@@ -60,9 +65,11 @@ class DOE:
             self.Taguchi()
         elif self.driver == 'Full Factorial':
             self.FullFactorial()
+        elif self.driver == 'Random':
+            self.Random(runs)
         #TODO: Define a FullFactorial Driver or something like that
         self.domain = {}
-
+    
         for j in range(self.n_var+self.n_var_2):
             upper = self.variables[j]['upper']
             lower = self.variables[j]['lower']
@@ -97,7 +104,10 @@ class DOE:
             for key in self.domain:
                 output[key] = self.domain[key][run]
             return output
-        
+        if store == True:
+            timestr = time.strftime('%Y%m%d')
+            file_txt = open('DOE_data.txt', 'w')
+
         for i in range(self.runs):
             input = set_input(self,i)
             # If there is a constant input, add it to input dictionary
@@ -107,12 +117,25 @@ class DOE:
                 for key_dependent in dependent_variables:
                     key_independent = dependent_variables[key_dependent]
                     input.update({key_dependent : input[key_independent]})
+            # Store values before
+            if store == True:
+                for key in input:
+                    file_txt.write('%10f \t ' % (input[key]))
+
+            # Run script
             result = function(input)
+            
+            # Run values afterwards
+            if store == True:
+                for key in input:
+                    file_txt.write('%10f \t ' % (input[key]))
+                file_txt.write('\n')
+            # Store output values
             if i == 0:
                 # We will save the name of the putputs for plotting and etc
                 self.output_names = [key for key in result]
                 self.output = {}
-                for key in self.output_name:
+                for key in self.output_names:
                     self.output[key] = []
             for key in self.output_names:
                 self.output[key].append(result[key])
@@ -426,6 +449,16 @@ class DOE:
             self.array.append(subset)
 
         self.runs = len(self.array)
+
+    def Random(self, runs):
+        random.seed()
+        self.array = []
+        self.runs = runs
+        for i in range(self.runs):
+            design_i = []
+            for j in range(self.n_var):
+                design_i.append(random.random())
+            self.array.append(design_i)
 
     def find_nadir_utopic(self, not_zero=True):
         """Find the minimum and maximum, nadir and utopic, for each
