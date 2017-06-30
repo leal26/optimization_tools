@@ -15,7 +15,9 @@ def plot_generations(filename, cost = None, g = None, p = None,
                      units = ['N','m/s'], n_generation = 20,
                      last_best = True, color_scheme = 'individual', 
                      optimizers = ['NSGA2','SNOPT'], plot_type = 'all',
-                     output_labels = None, label_size = None):
+                     output_labels = None, label_size = None,
+                     pareto = False, pareto_options = {'maxX': False,
+                     'maxY':False}):
     """
     
     :param filename: name of file to read
@@ -74,7 +76,7 @@ def plot_generations(filename, cost = None, g = None, p = None,
         population_size = len(pullData[RandomKey]) / n_generation
         for i in range(population_size, len(pullData[RandomKey])+population_size):
             pullData['Generation'].append( i/ population_size )
-        print pullData['Generation'], population_size
+        #print pullData['Generation'], population_size
         # If process is True, the values that violate the constrain will be 
         # deleted in all of the dictionaries of pullData
         if process:
@@ -127,8 +129,8 @@ def plot_generations(filename, cost = None, g = None, p = None,
         x = pullData['Generation']
         y = pullData[outputs_plotted[0]]
         plt.xlim(0.5, n_generation + 0.5)
-    print 'x ', x
-    print 'y ', y
+    # print 'x ', x
+    # print 'y ', y
     if plot_type == 'best' or plot_type == 'all and best' or (
         plot_type == 'number of evaluations' and source == 'raw'):
         global_min = 9999.
@@ -167,6 +169,13 @@ def plot_generations(filename, cost = None, g = None, p = None,
             plt.scatter(x[-1], y[-1], marker = 's')
             plt.plot()         
 
+    if pareto == True:
+        print 'PARETO'
+        p_front = pareto_frontier(x, y, maxX = pareto_options['maxX'],
+        							maxY = pareto_options['maxY']) 
+        # Then plot the Pareto frontier on top
+        plt.plot(p_front[0], p_front[1], lw = 3)	
+		
     plt.grid()
     
     if label_size == None:
@@ -237,7 +246,26 @@ def plot_generations(filename, cost = None, g = None, p = None,
                                fontsize = label_size[1])
                 else:
                     plt.ylabel(output_labels[0],
-                               fontsize = label_size[1])                    
+                               fontsize = label_size[1])
+def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
+# Sort the list in either ascending or descending order of X
+    myList = sorted([[Xs[i], Ys[i]] for i in range(len(Xs))], reverse=maxX)
+# Start the Pareto frontier with the first value in the sorted list
+    p_front = [myList[0]]    
+# Loop through the sorted list
+    for pair in myList[1:]:
+        if maxY: 
+            if pair[1] >= p_front[-1][1]: # Look for higher values of Y…
+                p_front.append(pair) # … and add them to the Pareto frontier
+        else:
+            if pair[1] <= p_front[-1][1]: # Look for lower values of Y…
+                p_front.append(pair) # … and add them to the Pareto frontier
+# Turn resulting pairs back into a list of Xs and Ys
+    p_frontX = [pair[0] for pair in p_front]
+    p_frontY = [pair[1] for pair in p_front]
+	
+    return p_frontX, p_frontY
+	
 if __name__ == "__main__":
     filename = "Results.txt"
 

@@ -75,7 +75,7 @@ class DOE:
             lower = self.variables[j]['lower']
             levels = self.variables[j]['levels']
             type = self.variables[j]['type']
-            
+
             dummy = []
             for i in range(self.runs):
                 scale = self.array[i][j]
@@ -85,11 +85,11 @@ class DOE:
                 else:
                     dummy.append(lower + scale*(upper-lower) / (levels-1.))
             self.domain[self.variables[j]['name']] = dummy
-        
+
     def run(self, function, cte_input=None, dependent_variables = None):
         """Runs and saves the results for the configurations obtained in define_points
         method.
-        
+
         - cte_input : if defined, is a dictionary containing the constant
           inputs.
         - dependent_variables: if defined, it creates a relationship between
@@ -98,12 +98,13 @@ class DOE:
         DataFile = open('FullFactorial.txt','w')
         DataFile.write('Au0\t\tAl0\t\tAu1\t\tAl1\tt_spar\tt_spar_box\tt_rib\tt_skin\t\tn_ribs\t\tWeight\t\tLift\t\tDrag\t\tMaxMises\t\tDispTip\t\tEigenValue\tVelocity\n')
         DataFile.close()
-        
+
         def set_input(self,run):
             output = {}
             for key in self.domain:
                 output[key] = self.domain[key][run]
             return output
+
         if store == True:
             timestr = time.strftime('%Y%m%d')
             file_txt = open('DOE_data.txt', 'w')
@@ -147,7 +148,7 @@ class DOE:
         anything else.
         """
         self.influences = {}
-        
+
         # For refinement reasons during plotting, it is relevant to
         # know which ones have zeros
         self.equal_to_zero = {key:[False]*(self.n_var+self.n_var_2)*self.levels for
@@ -156,14 +157,14 @@ class DOE:
             Y = self.output[output_name]
             # List of outputs
             self.influences[output_name] = []
-            
+
             for var in self.variables_names:
                 X = self.domain[var]
-                # Eliminate repetitions by transforming the list in to a set and 
+                # Eliminate repetitions by transforming the list in to a set and
                 # sort them. X_set will be used for counting
                 unique_X = sorted(set(X))
                 # For each unique X, the average of its values will be calculated
-                
+
                 for j in range(len(unique_X)):
                     indices = [i for i, x in enumerate(X) if x == unique_X[j]]
                     # Filter option
@@ -187,18 +188,18 @@ class DOE:
                         dummy += Y[index]/count
                         # Add to the last term of Y_DOE (sum of all)
                         self.influences[output_name][-1] += Y[index]/count
-
+        print self.influences
     if not in_Abaqus:
         def plot(self, shadow = [], xlabel = None, ylabel = None,
                  number_y = 5, process = None):
             """plots DOE just like in excel.
-            
+
             :param process: dictionary with output_name of outputs to be
             processed as keys and functions as the value of each key.
             :param number_y: number of values on the y-axis for each
             output."""
             import matplotlib.pyplot as plt
-            
+
             def list_to_string(self, separator=', '):
                 """Summ all the elements of a list of strings in to a string"""
                 resultant_string = ''
@@ -207,7 +208,7 @@ class DOE:
                 # Remove the last separator.
                 resultant_string = resultant_string[:-len(separator)]
                 return resultant_string
-                
+
             def create_ticks(self):
                 # In japanese mora is the length of each sylab, here it is the length of e
                 if self.levels == 2:
@@ -220,15 +221,15 @@ class DOE:
                     mora = ['-', '-o', 'o', 'o+', '+']
                 else:
                     raise Exception('n_range to high, max is 5!')
-                
+
                 # Replicate standard for all variables
                 return (self.n_var_2)*['-', '+'] + (self.n_var)*mora
-            
+
             def subtick_distance(self, border_spacing):
-                """Function togenerate the distances of the second x axis
+                """Function to generate the distances of the second x axis
                 using figtext"""
-                
-                # normalizing values forimage to be >0 and <1 
+
+                # normalizing values forimage to be >0 and <1
                 norm = (2*border_spacing + self.levels*self.n_var - 1)
 
                 # Initial proportional distance
@@ -239,18 +240,20 @@ class DOE:
                     print 'x0', current
                     if self.levels % 2 == 0: # if even
                         if i==0:
-                            current += (self.levels)/2./norm
-                        else:
+                            current += (self.levels - 1)/2./norm
+                        elif i==1:
                             current += (self.levels + 1)/2./norm
+                        else:
+                            current += (self.levels + 3)/2./norm
                     else: # if odd
                         if i == 0:
                             current += (self.levels/2 )/norm
                         else:
                             current += (self.levels/2 +1)/norm
-                    print current
+                    print i, current, norm, self.levels
                     distances.append(current)
                 return distances
-            
+
             # IF the user wants to add pretty names, if not just do with the
             # variable names
             if xlabel == None:
@@ -258,16 +261,16 @@ class DOE:
             if ylabel == None:
                 ylabel = self.output_names
             ticks = create_ticks(self)
-            border_spacing = .2
+            border_spacing = 0.2
             for output in self.output_names:
                 Y = self.influences[output]
-                if output != None:
+                if process != None:
                     if output in process:
                         for i in range(len(Y)):
                             Y[i] = process[output](Y[i])
-                plt.subplot(100*len(self.output_names) + 11 + 
+                plt.subplot(100*len(self.output_names) + 11 +
                             self.output_names.index(output))
-         
+
                 # Creating dummy values for horizontal axis
                 xi = range((self.n_var+self.n_var_2) * self.levels)
                 # Define ticks for only last
@@ -287,19 +290,19 @@ class DOE:
     #                    plt.plot(xi[i*self.levels : (i+1) * self.levels],
     #                             Y[i*self.levels : (i+1) * self.levels],
     #                             '--',color=plt.getp(line, 'linewidth'))
+
                 plt.ylabel(ylabel[self.output_names.index(output)])
 #                plt.xlabel("Design Variables ("+list_to_string(self)+")")
-            
+
 #                if self.output_names.index(output) == 0:
 #                    plt.title("Design of Experiment: %i level %s" %
 #                              (self.levels, self.driver))
 
                 plt.xlim([-border_spacing, max(xi) + border_spacing])
-                plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)), 
+                plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
                          max(Y) + 0.05*(max(Y)-min(Y)))
                 plt.locator_params(axis = 'y', nbins = number_y)
                 plt.grid()
-                plt.show()
 
             # Create the second x axis
             distances = subtick_distance(self, border_spacing)
@@ -316,44 +319,61 @@ class DOE:
                                  xytext = (0, y), xycoords='axes fraction',
                                  textcoords='offset points', horizontalalignment='center',
                                  verticalalignment='center')
+            plt.show()
         def plot_domain(self, Xaxis, Yaxis):
-            """Plots all the points in a 2D plot for the definided Xaxis and 
+            """Plots all the points in a 2D plot for the definided Xaxis and
             Yaxis
-            
+
             param: Xaxis: string containing key for x axis
             param: Yaxis: string containing key for y axis"""
-            
+
             plt.scatter(self.output[Xaxis],self.output[Yaxis])
             plt.xlabel(Xaxis)
             plt.ylabel(Yaxis)
-            
-        def load(self, filename, variables_names, outputs_names, header=None):
+
+        def load(self, data_object , variables_names = None,
+                 outputs_names = None, header=None, filetype = 'file'):
             """ Load data from text file with results of DOE.
                 TODO: NEED TO INCLUDE POSSIBILITY FOR TWO LEVEL VARIABLE
                 - input:
+                    - data_object: string for text file or name of previous
+                                    DOE object
                     - header: If not specified, the first line in the file
                       will be considered to be the header.
+                    - filetype:
+                        - if 'file': will use output_reader and read data from
+                            file
+                        - if 'object': will load a DOE object and copy all of
+                         its attributes. Allows to have the same object
+                         inside and outside Abaqus, but with optional
+                         plotting results.
+
             """
-            if self.variables_names == []:
-                if header == None:
-                    Data = xf.output_reader(filename=filename)
+            if filetype == 'file':
+                if self.variables_names == []:
+                    if header == None:
+                        Data = xf.output_reader(filename=data_object)
+                    else:
+                        Data = xf.output_reader(filename=data_object, header=header)
+                    if True==True:
+                        self.output_names = outputs_names
+                        self.variables_names = variables_names
+                        self.n_var = len(variables_names)
+                        self.n_var_2 = 0
+                        self.output = {key:Data[key] for key in self.output_names}
+                        self.domain = {key:Data[key] for key in self.variables_names}
+        #            except:
+        #                raise Exception('Something wrong with variables_names and '+
+        #                                'outputs_names.')
                 else:
-                    Data = xf.output_reader(filename=filename, header=header)
-                if True==True:
-                    self.output_names = outputs_names
-                    self.variables_names = variables_names
-                    self.n_var = len(variables_names)
-                    self.n_var_2 = 0
-                    self.output = {key:Data[key] for key in self.output_names}
-                    self.domain = {key:Data[key] for key in self.variables_names}
-    #            except:
-    #                raise Exception('Something wrong with variables_names and '+ 
-    #                                'outputs_names.')
-            else:
-                raise Exception('Cannot atribute variables and load data at the' +
-                                'same object.')
-#    def save(self):
-        
+                    raise Exception('Cannot atribute variables and load data at the' +
+                                    'same object.')
+            # If an object just copy all attributes to the new DOE object
+            elif filetype == 'object':
+                for attribute in dir(data_object):
+                    var = getattr(data_object, attribute)
+                    setattr(self, attribute, var)
+
     def Taguchi(self):
         """ Find the necessary Taguchi array."""
         self.runs = 50
@@ -417,7 +437,7 @@ class DOE:
             # Since the first column is for two level variables, we can ignore it.
             for i in range(self.runs):
                 self.array[i] = Taguchi_L50[i][1-self.n_var_2 : self.n_var+1]
-                
+
     def FullFactorial(self):
         """Define array for Full Factorial for a given number of
         levels.
@@ -425,13 +445,13 @@ class DOE:
         def product(*args, **kwds):
             """ Returns all the possible combinations beween two lists
             or between itself.
-            
+
             >>> print product('ABCD', 'xy')
             >>> Ax Ay Bx By Cx Cy Dx Dy
-            
+
             >>> print product(range(2), repeat=3)
             >>>000 001 010 011 100 101 110 111
-            
+
             Source: itertools
             """
             pools = map(tuple, args) * kwds.get('repeat', 1)
@@ -463,74 +483,74 @@ class DOE:
     def find_nadir_utopic(self, not_zero=True):
         """Find the minimum and maximum, nadir and utopic, for each
         output variable.
-        
+
         This function is quite relevant for normalizing the objective
         function for the optimization.
-        
+
         param: not_zero: filters the zero values out.
-        
+
         returns: attributes utopic and nadir dictionaries for the output
                  variables, each containing a float value
-                 
+
         sources: http://stackoverflow.com/questions/16122362/python-matplotlib-how-to-put-text-in-the-corner-of-equal-aspect-figure
         """
         # First verify if there are any zeros, if true, get them out
         equal_to_zero = {}
         for key in self.output_names:
             equal_to_zero[key] = [False]*len(self.output[key])
-        
+
             if not_zero:
                 for i in range(len(self.output[key])):
                     for key2 in self.output_names:
                         if self.output[key2][i] == 0:
                             equal_to_zero[key][i] = True
                         elif equal_to_zero[key][i] != True:
-                            equal_to_zero[key][i] = False            
-        
+                            equal_to_zero[key][i] = False
+
         # Now we can find the nadir and the utopic points
         self.nadir = {}
-        self.utopic = {}                 
+        self.utopic = {}
         for key in self.output_names:
             self.nadir[key] = 0
             self.utopic[key] = 99999999999999999.
-            
+
             for i in range(len(self.output[key])):
                 if equal_to_zero[key][i] != True and self.output[key][i] < self.utopic[key]:
                     self.utopic[key] = self.output[key][i]
 
                 if equal_to_zero[key][i] != True and self.output[key][i] > self.nadir[key]:
                     self.nadir[key] = self.output[key][i]
-                    
-        
+
+
 if __name__ == "__main__":
     problem = DOE(levels=5, driver='Full Factorial')
 #    problem.add_variable('Al0', lower=0.04, upper=0.2, type=float)
 #    problem.add_variable('Al1', lower=-0.4, upper=0.1, type=float)
 #    problem.define_points()
-#    
+#
 #    t_spar= 0.0068 #0.004473234920038927
 #    t_rib= 0.0046 #0.005127943532786699
 #    t_skin= 0.0018 #0.006486394197009234
 #    n_ribs= 19
 #    t_spar_box= 0.0061 #0.006531976101000104
-#    
+#
 #    problem.run(Wing_model, cte_input={'t_spar':t_spar,'t_rib':t_rib,
 #           't_skin':t_skin, 'n_ribs':n_ribs, 't_spar_box':t_spar_box}) #, cte_input={'n_ribs':19}
-#    
+#
 #    timestr = time.strftime('%Y%m%d')
-#    #fileObject = open('DOE_'+ self.driver + '_' + timestr,'wb') 
-#    fileObject = open('DOE_FullFactorial_20150828','wb') 
-#    pickle.dump(problem, fileObject)   
-#    fileObject.close()   
-        
-    problem.load(filename='FullFactorial.txt', 
+#    #fileObject = open('DOE_'+ self.driver + '_' + timestr,'wb')
+#    fileObject = open('DOE_FullFactorial_20150828','wb')
+#    pickle.dump(problem, fileObject)
+#    fileObject.close()
+
+    problem.load(filename='FullFactorial.txt',
                  variables_names= ['Al0', 'Al1'],
                  outputs_names = ['Weight', 'Lift', 'Drag', 'MaxMises', 'DispTip', 'EigenValue'])
     problem.find_influences(not_zero=True)
     problem.find_nadir_utopic(not_zero=True)
     print 'Nadir: ', problem.nadir
     print 'Utopic: ', problem.utopic
-    
+
     convert_to_MPa = lambda x: x/1e6
     problem.plot(xlabel = ['$A_{l_0}$', '$A_{l_1}$'],
                  ylabel = ['Weight (N)', 'Lift (N)', 'Drag (N)', 'Max\nVonMises \n Stress (MPa)',
