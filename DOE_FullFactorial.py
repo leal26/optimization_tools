@@ -105,9 +105,11 @@ class DOE:
                 output[key] = self.domain[key][run]
             return output
 
-        if store == True:
-            timestr = time.strftime('%Y%m%d')
+        if self.store == True:
+            # timestr = time.strftime('%Y%m%d')
             file_txt = open('DOE_data.txt', 'w')
+
+        header_ready = False
 
         for i in range(self.runs):
             input = set_input(self,i)
@@ -118,19 +120,40 @@ class DOE:
                 for key_dependent in dependent_variables:
                     key_independent = dependent_variables[key_dependent]
                     input.update({key_dependent : input[key_independent]})
-            # Store values before
-            if store == True:
-                for key in input:
-                    file_txt.write('%10f \t ' % (input[key]))
 
+            # Store values before (if first time create header
+            if self.store == True:
+                if header_ready == False:
+                    print 'here'
+                    for key in input:
+                        file_txt.write(key + '\t')
+                else:
+                    file_txt = open('DOE_data.txt', 'a')
+                    for key in input:
+                        file_txt.write('%10f \t ' % (input[key]))
+                file_txt.close()
             # Run script
+            print self.store, header_ready, input
             result = function(input)
             
-            # Run values afterwards
-            if store == True:
-                for key in input:
-                    file_txt.write('%10f \t ' % (input[key]))
+            # Store output values (if first time, will finish header
+            # with output keys and then write all the input and outputs
+            if self.store == True:
+                file_txt = open('DOE_data.txt', 'a')
+                if header_ready == False:
+                    for key in result:
+                        file_txt.write(key + '\t')
+                    file_txt.write('\n')
+                    for key in input:
+                        file_txt.write('%10f \t ' % (input[key]))
+                    for key in result:
+                        file_txt.write('%10f \t ' % (result[key]))
+                    header_ready = True
+                else:
+                    for key in result:
+                        file_txt.write('%10f \t ' % (result[key]))
                 file_txt.write('\n')
+                file_txt.close()
             # Store output values
             if i == 0:
                 # We will save the name of the putputs for plotting and etc
@@ -320,14 +343,25 @@ class DOE:
                                  textcoords='offset points', horizontalalignment='center',
                                  verticalalignment='center')
             plt.show()
-        def plot_domain(self, Xaxis, Yaxis):
+        def plot_domain(self, Xaxis, Yaxis, not_equal = None):
             """Plots all the points in a 2D plot for the definided Xaxis and
             Yaxis
 
             param: Xaxis: string containing key for x axis
-            param: Yaxis: string containing key for y axis"""
+            param: Yaxis: string containing key for y axis
 
-            plt.scatter(self.output[Xaxis],self.output[Yaxis])
+            not_equal is list of values that if equal, data is removed from sample.
+            It is of length 2"""
+            if filter == None:
+                plt.scatter(self.output[Xaxis],self.output[Yaxis])
+            else:
+                data = zip(self.output[Xaxis],self.output[Yaxis])
+                print data
+                data = filter(lambda (a,b): a != not_equal[0], data)
+                data = filter(lambda (a,b): b != not_equal[1], data)
+                print data
+                X,Y = zip(*data)
+                plt.scatter(X,Y)
             plt.xlabel(Xaxis)
             plt.ylabel(Yaxis)
 
