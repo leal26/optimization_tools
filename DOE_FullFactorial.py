@@ -8,6 +8,7 @@ import pickle
 import time
 import random
 
+from pyDOE import *
 import xfoil_module as xf
 
 try:
@@ -18,6 +19,7 @@ except:
 
 if not in_Abaqus:
     import matplotlib.pyplot as plt
+    from optimization_tools import pareto_frontier
 
 class DOE:
     """Create a Design of Experiences Environment."""
@@ -66,8 +68,12 @@ class DOE:
         elif self.driver == 'Full Factorial':
             self.FullFactorial()
         elif self.driver == 'Random':
+            self.runs = runs
             self.Random(runs)
-        #TODO: Define a FullFactorial Driver or something like that
+        elif self.driver == 'Latin Hypercube':
+            self.runs = runs
+            self.array = lhs(len(self.variables), samples = runs, criterion='center')
+
         self.domain = {}
     
         for j in range(self.n_var+self.n_var_2):
@@ -343,28 +349,52 @@ class DOE:
                                  textcoords='offset points', horizontalalignment='center',
                                  verticalalignment='center')
             plt.show()
-        def plot_domain(self, Xaxis, Yaxis, not_equal = None):
+        def plot_domain(self, Xaxis, Yaxis, not_equal = None, pareto = False,
+                        labels = False):
             """Plots all the points in a 2D plot for the definided Xaxis and
             Yaxis
 
             param: Xaxis: string containing key for x axis
             param: Yaxis: string containing key for y axis
-
+            param: pareto if != False print PAreto frontier. It is a list of True/False
+                   related to max/min value
             not_equal is list of values that if equal, data is removed from sample.
             It is of length 2"""
-            if filter == None:
-                plt.scatter(self.output[Xaxis],self.output[Yaxis])
+            if Xaxis not in self.output:
+                X = self.domain[Xaxis]
             else:
-                data = zip(self.output[Xaxis],self.output[Yaxis])
+                X = self.output[Xaxis]
+            if Yaxis not in self.output:
+                Y = self.domain[Yaxis]
+            else:
+                Y = self.output[Yaxis]
+            if not_equal == None:
+                plt.scatter(X,Y)
+                if pareto != False:
+                    pareto_X, pareto_Y = pareto_frontier(X, Y,
+                                                         maxX = pareto[0],
+                                                         maxY = pareto[1])
+                    plt.plot(pareto_X, pareto_Y)
+            else:
+                data = zip(X,Y)
                 print data
                 data = filter(lambda (a,b): a != not_equal[0], data)
                 data = filter(lambda (a,b): b != not_equal[1], data)
                 print data
                 X,Y = zip(*data)
                 plt.scatter(X,Y)
-            plt.xlabel(Xaxis)
-            plt.ylabel(Yaxis)
 
+                if pareto != False:
+                    pareto_X, pareto_Y = pareto_frontier(X, Y,
+                                                         maxX = pareto[0],
+                                                         maxY = pareto[1])
+                    plt.plot(pareto_X, pareto_Y)
+            if labels == False:
+                plt.xlabel(Xaxis)
+                plt.ylabel(Yaxis)
+            else:
+                plt.xlabel(labels[0])
+                plt.ylabel(labels[1])
         def load(self, data_object , variables_names = None,
                  outputs_names = None, header=None, filetype = 'file'):
             """ Load data from text file with results of DOE.
@@ -507,7 +537,6 @@ class DOE:
     def Random(self, runs):
         random.seed()
         self.array = []
-        self.runs = runs
         for i in range(self.runs):
             design_i = []
             for j in range(self.n_var):
