@@ -7,6 +7,7 @@ Created on Fri Jul 24 18:36:06 2015
 import pickle
 import time
 import random
+import math
 
 from pyDOE import *
 import xfoil_module as xf
@@ -377,11 +378,13 @@ class DOE:
                     plt.plot(pareto_X, pareto_Y)
             else:
                 data = zip(X,Y)
-                print data
                 data = filter(lambda (a,b): a != not_equal[0], data)
                 data = filter(lambda (a,b): b != not_equal[1], data)
-                print data
+                # Check for Not a number
+                data = filter(lambda (a,b): not math.isnan(a), data)
+                data = filter(lambda (a,b): not math.isnan(a), data)
                 X,Y = zip(*data)
+
                 plt.scatter(X,Y)
 
                 if pareto != False:
