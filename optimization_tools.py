@@ -247,6 +247,7 @@ def plot_generations(filename, cost = None, g = None, p = None,
                 else:
                     plt.ylabel(output_labels[0],
                                fontsize = label_size[1])
+
 def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
 # Sort the list in either ascending or descending order of X
     myList = sorted([[Xs[i], Ys[i]] for i in range(len(Xs))], reverse=maxX)

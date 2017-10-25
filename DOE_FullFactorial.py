@@ -101,9 +101,9 @@ class DOE:
         - dependent_variables: if defined, it creates a relationship between
           different variables such as {'t_spar':'t_rib'}
         """
-        DataFile = open('FullFactorial.txt','w')
-        DataFile.write('Au0\t\tAl0\t\tAu1\t\tAl1\tt_spar\tt_spar_box\tt_rib\tt_skin\t\tn_ribs\t\tWeight\t\tLift\t\tDrag\t\tMaxMises\t\tDispTip\t\tEigenValue\tVelocity\n')
-        DataFile.close()
+        # DataFile = open('FullFactorial.txt','w')
+        # DataFile.write('Au0\t\tAl0\t\tAu1\t\tAl1\tt_spar\tt_spar_box\tt_rib\tt_skin\t\tn_ribs\t\tWeight\t\tLift\t\tDrag\t\tMaxMises\t\tDispTip\t\tEigenValue\tVelocity\n')
+        # DataFile.close()
 
         def set_input(self,run):
             output = {}
@@ -111,7 +111,7 @@ class DOE:
                 output[key] = self.domain[key][run]
             return output
 
-        if self.store == True:
+        if self.store != False:
             # timestr = time.strftime('%Y%m%d')
             file_txt = open('DOE_data.txt', 'w')
 
@@ -128,9 +128,8 @@ class DOE:
                     input.update({key_dependent : input[key_independent]})
 
             # Store values before (if first time create header
-            if self.store == True:
+            if self.store != False:
                 if header_ready == False:
-                    print 'here'
                     for key in input:
                         file_txt.write(key + '\t')
                 else:
@@ -139,20 +138,20 @@ class DOE:
                         file_txt.write('%10f \t ' % (input[key]))
                 file_txt.close()
             # Run script
-            print self.store, header_ready, input
             result = function(input)
             
             # Store output values (if first time, will finish header
             # with output keys and then write all the input and outputs
-            if self.store == True:
+            if self.store != False:
                 file_txt = open('DOE_data.txt', 'a')
                 if header_ready == False:
-                    for key in result:
+                    for key in self.store:
                         file_txt.write(key + '\t')
                     file_txt.write('\n')
+                    print input
                     for key in input:
                         file_txt.write('%10f \t ' % (input[key]))
-                    for key in result:
+                    for key in self.store:
                         file_txt.write('%10f \t ' % (result[key]))
                     header_ready = True
                 else:
