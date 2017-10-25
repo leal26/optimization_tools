@@ -250,7 +250,8 @@ def plot_generations(filename, cost = None, g = None, p = None,
 
 def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
 # Sort the list in either ascending or descending order of X
-    myList = sorted([[Xs[i], Ys[i]] for i in range(len(Xs))], reverse=maxX)
+    XY = [[float(Xs[i]), float(Ys[i])] for i in range(len(Xs))]
+    myList = sorted(XY, reverse=maxX)
 # Start the Pareto frontier with the first value in the sorted list
     p_front = [myList[0]]    
 # Loop through the sorted list
@@ -264,7 +265,6 @@ def pareto_frontier(Xs, Ys, maxX = True, maxY = True):
 # Turn resulting pairs back into a list of Xs and Ys
     p_frontX = [pair[0] for pair in p_front]
     p_frontY = [pair[1] for pair in p_front]
-	
     return p_frontX, p_frontY
 	
 if __name__ == "__main__":
