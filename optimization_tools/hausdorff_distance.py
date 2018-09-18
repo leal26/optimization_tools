@@ -38,7 +38,7 @@ def hausdorff_distance_2D(a, b, rotation = False, rotation_pivot = False,
         
 def find_d(a, b): 
     # It is assumed that a and b have the same keys with the same lengths
-    keys = a.keys()
+    keys = list(a.keys())
     n_a = len(a[keys[0]])
     n_b = len(b[keys[0]])
     min_values = 1e10 * np.ones(n_a) 
@@ -67,4 +67,4 @@ if __name__ == '__main__':
 
     data = output_reader(filename, separator = ', ', header = ['x', 'y'])
     
-    print hausdorff_distance_2D(data, data)
+    print(hausdorff_distance_2D(data, data))
