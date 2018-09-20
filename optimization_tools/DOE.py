@@ -2,6 +2,9 @@
 """
 Created on Fri Jul 24 18:36:06 2015
 
+Contains:
+ - DOE class: does everything you will ever need including factor effect plots
+ - pareto_frontier function: calculates for you the Pareto Front
 @author: Pedro Leal
 """
 import pickle
@@ -9,8 +12,8 @@ import time
 import random
 import math
 
-from pyDOE import *
-import xfoil_module as xf
+from pyDOE import lhs
+from optimization_tools.filehandling import output_reader
 
 try:
     from abaqus import *
@@ -20,16 +23,17 @@ except:
 
 if not in_Abaqus:
     import matplotlib.pyplot as plt
-    from optimization_tools import pareto_frontier
+
 
 class DOE:
     """Create a Design of Experiences Environment."""
-    def __init__(self, levels=2, driver='Taguchi', store = False):
+
+    def __init__(self, levels=2, driver='Taguchi', store=False):
         self.levels = levels
         self.driver = driver
         # All variable will be defined through the add_variable method
         self.variables = []
-        # For the influence method, we need a list of the names of all variables
+        # For the influence method, we need a list of names of all variables
         self.variables_names = []
         # Variable to know if store  values in a txt
         self.store = store
@@ -40,15 +44,16 @@ class DOE:
             levels = self.levels
 
         try:
-            self.variables.append({'upper': upper, 'lower': lower, 'name': name,
-                                   'levels': levels, 'type': type})
+            self.variables.append({'upper': upper, 'lower': lower,
+                                   'name': name, 'levels': levels,
+                                   'type': type})
             self.variables_names.append(name)
         except:
-            print 'Forgot to define upper, lower or name'
+            print('Forgot to define upper, lower or name')
 
     def define_points(self, runs=None):
         """
-        Method to define the points to be evaluated based on the results from the
+        Method to define the points to be evaluated based on the results from
         distribution given by the array method and the bound defined by the
         add_variable method.
 
@@ -73,10 +78,11 @@ class DOE:
             self.Random(runs)
         elif self.driver == 'Latin Hypercube':
             self.runs = runs
-            self.array = lhs(len(self.variables), samples = runs, criterion='center')
+            self.array = lhs(len(self.variables), samples=runs,
+                             criterion='center')
 
         self.domain = {}
-    
+
         for j in range(self.n_var+self.n_var_2):
             upper = self.variables[j]['upper']
             lower = self.variables[j]['lower']
@@ -87,50 +93,47 @@ class DOE:
             for i in range(self.runs):
                 scale = self.array[i][j]
                 if type == int and (scale*(upper-lower) % (levels-1.) != 0):
-                    raise Exception('The bounds of the defined integer are not '+
-                                    'compatible with the number of levels.')
+                    raise Exception('The bounds of the defined integer are ' +
+                                    'not compatible with number of levels.')
                 else:
                     dummy.append(lower + scale*(upper-lower) / (levels-1.))
             self.domain[self.variables[j]['name']] = dummy
 
-    def run(self, function, cte_input=None, dependent_variables = None):
-        """Runs and saves the results for the configurations obtained in define_points
-        method.
+    def run(self, function, cte_input=None, dependent_variables=None):
+        """Runs and saves the results for the configurations obtained in
+        define_points method.
 
         - cte_input : if defined, is a dictionary containing the constant
           inputs.
         - dependent_variables: if defined, it creates a relationship between
           different variables such as {'t_spar':'t_rib'}
         """
-        # DataFile = open('FullFactorial.txt','w')
-        # DataFile.write('Au0\t\tAl0\t\tAu1\t\tAl1\tt_spar\tt_spar_box\tt_rib\tt_skin\t\tn_ribs\t\tWeight\t\tLift\t\tDrag\t\tMaxMises\t\tDispTip\t\tEigenValue\tVelocity\n')
-        # DataFile.close()
 
-        def set_input(self,run):
+        def set_input(self, run):
             output = {}
             for key in self.domain:
                 output[key] = self.domain[key][run]
             return output
 
-        if self.store != False:
+        if self.store is not False:
             # timestr = time.strftime('%Y%m%d')
             file_txt = open('DOE_data.txt', 'w')
 
         header_ready = False
 
         for i in range(self.runs):
-            input = set_input(self,i)
+            input = set_input(self, i)
             # If there is a constant input, add it to input dictionary
-            if cte_input != None:
+            if cte_input is not None:
                 input.update(cte_input)
-            if dependent_variables != None:
+            if dependent_variables is not None:
                 for key_dependent in dependent_variables:
                     key_independent = dependent_variables[key_dependent]
-                    input.update({key_dependent : input[key_independent]})
+                    input.update({key_dependent: input[key_independent]})
 
             # Store values before (if first time create header
-            if self.store != False:
-                if header_ready == False:
+            if self.store is not False:
+                if header_ready is False:
                     for key in input:
                         file_txt.write(key + '\t')
                 else:
@@ -140,16 +143,15 @@ class DOE:
                 file_txt.close()
             # Run script
             result = function(input)
-            
+
             # Store output values (if first time, will finish header
             # with output keys and then write all the input and outputs
-            if self.store != False:
+            if self.store is not False:
                 file_txt = open('DOE_data.txt', 'a')
-                if header_ready == False:
+                if header_ready is False:
                     for key in self.store:
                         file_txt.write(key + '\t')
                     file_txt.write('\n')
-                    print input
                     for key in input:
                         file_txt.write('%10f \t ' % (input[key]))
                     for key in self.store:
@@ -180,8 +182,9 @@ class DOE:
 
         # For refinement reasons during plotting, it is relevant to
         # know which ones have zeros
-        self.equal_to_zero = {key:[False]*(self.n_var+self.n_var_2)*self.levels for
-                         key in self.output_names}
+        self.equal_to_zero = {key: [False]*(self.n_var +
+                                            self.n_var_2)*self.levels for
+                              key in self.output_names}
         for output_name in self.output_names:
             Y = self.output[output_name]
             # List of outputs
@@ -189,10 +192,10 @@ class DOE:
 
             for var in self.variables_names:
                 X = self.domain[var]
-                # Eliminate repetitions by transforming the list in to a set and
-                # sort them. X_set will be used for counting
+                # Eliminate repetitions by transforming the list in to a set
+                # and sort them. X_set will be used for counting
                 unique_X = sorted(set(X))
-                # For each unique X, the average of its values will be calculated
+                # For each unique X, the value average will be calculated
 
                 for j in range(len(unique_X)):
                     indices = [i for i, x in enumerate(X) if x == unique_X[j]]
@@ -217,10 +220,9 @@ class DOE:
                         dummy += Y[index]/count
                         # Add to the last term of Y_DOE (sum of all)
                         self.influences[output_name][-1] += Y[index]/count
-        print self.influences
     if not in_Abaqus:
-        def plot(self, shadow = [], xlabel = None, ylabel = None,
-                 number_y = 5, process = None):
+        def plot(self, shadow=[], xlabel=None, ylabel=None,
+                 number_y=5, process=None):
             """plots DOE just like in excel.
 
             :param process: dictionary with output_name of outputs to be
@@ -239,7 +241,8 @@ class DOE:
                 return resultant_string
 
             def create_ticks(self):
-                # In japanese mora is the length of each sylab, here it is the length of e
+                # In japanese mora is the length of each sylab
+                #  here it is the length of e
                 if self.levels == 2:
                     mora = ['-', '+']
                 elif self.levels == 3:
@@ -266,34 +269,34 @@ class DOE:
                 distances = []
                 for i in range(len(self.variables_names)):
                     current = x0 + i*(self.levels - 1)/norm
-                    print 'x0', current
-                    if self.levels % 2 == 0: # if even
-                        if i==0:
-                            current += (self.levels - 1)/2./norm
-                        elif i==1:
+                    if self.levels % 2 == 0:  # if even
+                        if i == 0:
+                            current += (self.levels - 2)/2./norm
+                        elif i == 1:
                             current += (self.levels + 1)/2./norm
                         else:
                             current += (self.levels + 3)/2./norm
-                    else: # if odd
+                    else:  # if odd
                         if i == 0:
-                            current += (self.levels/2 )/norm
+                            current += (self.levels/2-.5)/norm
+                        elif i == 1:
+                            current += (self.levels/2 + .5)/norm
                         else:
-                            current += (self.levels/2 +1)/norm
-                    print i, current, norm, self.levels
+                            current += (self.levels/2 + 1.5)/norm
                     distances.append(current)
                 return distances
 
             # IF the user wants to add pretty names, if not just do with the
             # variable names
-            if xlabel == None:
+            if xlabel is None:
                 xlabel = self.variables_names
-            if ylabel == None:
+            if ylabel is None:
                 ylabel = self.output_names
             ticks = create_ticks(self)
             border_spacing = 0.2
             for output in self.output_names:
                 Y = self.influences[output]
-                if process != None:
+                if process is not None:
                     if output in process:
                         for i in range(len(Y)):
                             Y[i] = process[output](Y[i])
@@ -310,10 +313,11 @@ class DOE:
                     frame.axes.get_xaxis().set_visible(False)
 #                plt.fill_between(xi, min(Y) - 0.05*(max(Y)-min(Y)),
 #                                 max(Y) + 0.05*(max(Y)-min(Y)),
-#                                 where = self.equal_to_zero[output],color = '0.75')
+#                                 where = self.equal_to_zero[output],
+#                                 color = '0.75')
                 for i in range(self.n_var+self.n_var_2):
-                    plt.plot(xi[i*self.levels : (i+1) * self.levels],
-                             Y[i*self.levels : (i+1) * self.levels],
+                    plt.plot(xi[i*self.levels: (i+1) * self.levels],
+                             Y[i*self.levels: (i+1) * self.levels],
                              '-o')
     #                if output in shadow:
     #                    plt.plot(xi[i*self.levels : (i+1) * self.levels],
@@ -330,35 +334,40 @@ class DOE:
                 plt.xlim([-border_spacing, max(xi) + border_spacing])
                 plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
                          max(Y) + 0.05*(max(Y)-min(Y)))
-                plt.locator_params(axis = 'y', nbins = number_y)
-                plt.grid()
+                plt.locator_params(axis='y', nbins=number_y)
+                # plt.grid()
 
             # Create the second x axis
             distances = subtick_distance(self, border_spacing)
-            print distances
+            print(xlabel, distances)
             for i in range(len(distances)):
-                plt.annotate(xlabel[i], xy =(distances[i], 0),
-                             xytext = (0, -25), xycoords='axes fraction',
-                             textcoords='offset points', horizontalalignment='center',
+                plt.annotate(xlabel[i], xy=(distances[i], 0),
+                             xytext=(0, -25), xycoords='axes fraction',
+                             textcoords='offset points',
+                             horizontalalignment='center',
                              verticalalignment='center')
             for i in range(len(distances)-1):
                 for j in range(10):
                     y = -2.5*(j+2)
-                    plt.annotate('|', xy =((distances[i] + distances[i+1])/2. , 0),
-                                 xytext = (0, y), xycoords='axes fraction',
-                                 textcoords='offset points', horizontalalignment='center',
+                    plt.annotate('|', xy=((distances[i] +
+                                           distances[i+1])/2., 0),
+                                 xytext=(0, y), xycoords='axes fraction',
+                                 textcoords='offset points',
+                                 horizontalalignment='center',
                                  verticalalignment='center')
             plt.show()
-        def plot_domain(self, Xaxis, Yaxis, not_equal = None, pareto = False,
-                        labels = False):
+
+        def plot_domain(self, Xaxis, Yaxis, not_equal=None, pareto=False,
+                        labels=False):
             """Plots all the points in a 2D plot for the definided Xaxis and
             Yaxis
 
             param: Xaxis: string containing key for x axis
             param: Yaxis: string containing key for y axis
-            param: pareto if != False print PAreto frontier. It is a list of True/False
-                   related to max/min value
-            not_equal is list of values that if equal, data is removed from sample.
+            param: pareto if != False print PAreto frontier. It is a list of
+                   True/False related to max/min value
+            param: not_equal is list of values that if equal, data is removed
+                     from sample.
             It is of length 2"""
             if Xaxis not in self.output:
                 X = self.domain[Xaxis]
@@ -368,37 +377,39 @@ class DOE:
                 Y = self.domain[Yaxis]
             else:
                 Y = self.output[Yaxis]
-            if not_equal == None:
-                plt.scatter(X,Y)
-                if pareto != False:
+            if not_equal is None:
+                plt.scatter(X, Y)
+                if pareto is not False:
                     pareto_X, pareto_Y = pareto_frontier(X, Y,
-                                                         maxX = pareto[0],
-                                                         maxY = pareto[1])
+                                                         maxX=pareto[0],
+                                                         maxY=pareto[1])
                     plt.plot(pareto_X, pareto_Y)
             else:
-                data = zip(X,Y)
-                data = filter(lambda (a,b): a != not_equal[0], data)
-                data = filter(lambda (a,b): b != not_equal[1], data)
+                data = zip(X, Y)
+                data = list(filter(lambda xy: xy[0] != not_equal[0], data))
+                data = list(filter(lambda xy: xy[1] != not_equal[1], data))
                 # Check for Not a number
-                data = filter(lambda (a,b): not math.isnan(a), data)
-                data = filter(lambda (a,b): not math.isnan(a), data)
-                X,Y = zip(*data)
+                data = list(filter(lambda xy: math.isnan(xy[0]), data))
+                data = list(filter(lambda xy: math.isnan(xy[1]), data))
+                X, Y = zip(*data)
 
-                plt.scatter(X,Y)
+                plt.scatter(X, Y)
 
-                if pareto != False:
+                if pareto is not False:
                     pareto_X, pareto_Y = pareto_frontier(X, Y,
-                                                         maxX = pareto[0],
-                                                         maxY = pareto[1])
+                                                         maxX=pareto[0],
+                                                         maxY=pareto[1])
                     plt.plot(pareto_X, pareto_Y)
-            if labels == False:
+            if labels is False:
                 plt.xlabel(Xaxis)
                 plt.ylabel(Yaxis)
             else:
                 plt.xlabel(labels[0])
                 plt.ylabel(labels[1])
-        def load(self, data_object , variables_names = None,
-                 outputs_names = None, header=None, filetype = 'file'):
+            plt.show()
+
+        def load(self, data_object, variables_names=None,
+                 outputs_names=None, header=None, filetype='file'):
             """ Load data from text file with results of DOE.
                 TODO: NEED TO INCLUDE POSSIBILITY FOR TWO LEVEL VARIABLE
                 - input:
@@ -417,23 +428,26 @@ class DOE:
             """
             if filetype == 'file':
                 if self.variables_names == []:
-                    if header == None:
-                        Data = xf.output_reader(filename=data_object)
+                    if header is None:
+                        Data = output_reader(filename=data_object)
                     else:
-                        Data = xf.output_reader(filename=data_object, header=header)
-                    if True==True:
+                        Data = output_reader(filename=data_object,
+                                             header=header)
+                    if True is True:
                         self.output_names = outputs_names
                         self.variables_names = variables_names
                         self.n_var = len(variables_names)
                         self.n_var_2 = 0
-                        self.output = {key:Data[key] for key in self.output_names}
-                        self.domain = {key:Data[key] for key in self.variables_names}
+                        self.output = {key: Data[key] for key in
+                                       self.output_names}
+                        self.domain = {key: Data[key] for key in
+                                       self.variables_names}
         #            except:
-        #                raise Exception('Something wrong with variables_names and '+
-        #                                'outputs_names.')
+        #                raise Exception('Something wrong with  '+
+        #                                'variables_names and outputs_names.')
                 else:
-                    raise Exception('Cannot atribute variables and load data at the' +
-                                    'same object.')
+                    raise Exception('Cannot atribute variables and load ' +
+                                    'data at the same object.')
             # If an object just copy all attributes to the new DOE object
             elif filetype == 'object':
                 for attribute in dir(data_object):
@@ -493,16 +507,16 @@ class DOE:
                        [1, 4, 2, 1, 3, 3, 1, 4, 0, 0, 4, 2],
                        [1, 4, 3, 2, 4, 4, 2, 0, 1, 1, 0, 3],
                        [1, 4, 4, 3, 0, 0, 3, 1, 2, 2, 1, 4]
-                      ]
+                       ]
         # Initialize the Taguchi array.
         self.array = self.runs*[[]]
         # The reange of easch array was defined in:
         # https://controls.engin.umich.edu/wiki/index.php/
         # Design_of_experiments_via_taguchi_methods:_orthogonal_arrays
         if (self.n_var >= 7 and self.n_var <= 12) and self.n_var_2 <= 1:
-            # Since the first column is for two level variables, we can ignore it.
+            # Since the first column is for two level variables, we ignore it.
             for i in range(self.runs):
-                self.array[i] = Taguchi_L50[i][1-self.n_var_2 : self.n_var+1]
+                self.array[i] = Taguchi_L50[i][1-self.n_var_2: self.n_var+1]
 
     def FullFactorial(self):
         """Define array for Full Factorial for a given number of
@@ -520,7 +534,7 @@ class DOE:
 
             Source: itertools
             """
-            pools = map(tuple, args) * kwds.get('repeat', 1)
+            pools = list(map(tuple, args)) * kwds.get('repeat', 1)
             result = [[]]
             for pool in pools:
                 result = [x+[y] for x in result for y in pool]
@@ -531,7 +545,7 @@ class DOE:
 
         possibilities = [i for i in range(self.levels)]
 
-        for subset in product(possibilities, repeat = self.n_var):
+        for subset in product(possibilities, repeat=self.n_var):
             self.array.append(subset)
 
         self.runs = len(self.array)
@@ -569,7 +583,7 @@ class DOE:
                     for key2 in self.output_names:
                         if self.output[key2][i] == 0:
                             equal_to_zero[key][i] = True
-                        elif equal_to_zero[key][i] != True:
+                        elif equal_to_zero[key][i] is not True:
                             equal_to_zero[key][i] = False
 
         # Now we can find the nadir and the utopic points
@@ -580,45 +594,30 @@ class DOE:
             self.utopic[key] = 99999999999999999.
 
             for i in range(len(self.output[key])):
-                if equal_to_zero[key][i] != True and self.output[key][i] < self.utopic[key]:
+                if (equal_to_zero[key][i] is not True and
+                        self.output[key][i] < self.utopic[key]):
                     self.utopic[key] = self.output[key][i]
 
-                if equal_to_zero[key][i] != True and self.output[key][i] > self.nadir[key]:
+                if (equal_to_zero[key][i] is not True and
+                        self.output[key][i] > self.nadir[key]):
                     self.nadir[key] = self.output[key][i]
 
 
-if __name__ == "__main__":
-    problem = DOE(levels=5, driver='Full Factorial')
-#    problem.add_variable('Al0', lower=0.04, upper=0.2, type=float)
-#    problem.add_variable('Al1', lower=-0.4, upper=0.1, type=float)
-#    problem.define_points()
-#
-#    t_spar= 0.0068 #0.004473234920038927
-#    t_rib= 0.0046 #0.005127943532786699
-#    t_skin= 0.0018 #0.006486394197009234
-#    n_ribs= 19
-#    t_spar_box= 0.0061 #0.006531976101000104
-#
-#    problem.run(Wing_model, cte_input={'t_spar':t_spar,'t_rib':t_rib,
-#           't_skin':t_skin, 'n_ribs':n_ribs, 't_spar_box':t_spar_box}) #, cte_input={'n_ribs':19}
-#
-#    timestr = time.strftime('%Y%m%d')
-#    #fileObject = open('DOE_'+ self.driver + '_' + timestr,'wb')
-#    fileObject = open('DOE_FullFactorial_20150828','wb')
-#    pickle.dump(problem, fileObject)
-#    fileObject.close()
-
-    problem.load(filename='FullFactorial.txt',
-                 variables_names= ['Al0', 'Al1'],
-                 outputs_names = ['Weight', 'Lift', 'Drag', 'MaxMises', 'DispTip', 'EigenValue'])
-    problem.find_influences(not_zero=True)
-    problem.find_nadir_utopic(not_zero=True)
-    print 'Nadir: ', problem.nadir
-    print 'Utopic: ', problem.utopic
-
-    convert_to_MPa = lambda x: x/1e6
-    problem.plot(xlabel = ['$A_{l_0}$', '$A_{l_1}$'],
-                 ylabel = ['Weight (N)', 'Lift (N)', 'Drag (N)', 'Max\nVonMises \n Stress (MPa)',
-                           'Trailing edge\nDisplace-\nment (m)','Buckling\nEigenvalue'],
-                 process = {"MaxMises":convert_to_MPa}, number_y = 5)
-#    print problem.influences
+def pareto_frontier(Xs, Ys, maxX=True, maxY=True):
+    # Sort the list in either ascending or descending order of X
+    XY = [[float(Xs[i]), float(Ys[i])] for i in range(len(Xs))]
+    myList = sorted(XY, reverse=maxX)
+# Start the Pareto frontier with the first value in the sorted list
+    p_front = [myList[0]]
+# Loop through the sorted list
+    for pair in myList[1:]:
+        if maxY:
+            if pair[1] >= p_front[-1][1]:  # Look for higher values of Y…
+                p_front.append(pair)  # … and add them to the Pareto frontier
+        else:
+            if pair[1] <= p_front[-1][1]:  # Look for lower values of Y…
+                p_front.append(pair)  # … and add them to the Pareto frontier
+# Turn resulting pairs back into a list of Xs and Ys
+    p_frontX = [pair[0] for pair in p_front]
+    p_frontY = [pair[1] for pair in p_front]
+    return p_frontX, p_frontY
