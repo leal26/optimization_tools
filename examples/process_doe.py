@@ -1,4 +1,4 @@
-from optimization_tools import DOE
+from optimization_tools.DOE import DOE
 
 
 def convert_to_MPa(x):
@@ -22,3 +22,6 @@ problem.plot(xlabel=['$A_{l_0}$', '$A_{l_1}$'],
                      'Trailing edge\nDisplace-\nment (m)',
                      'Buckling\nEigenvalue'],
              process={"MaxMises": convert_to_MPa}, number_y=5)
+
+# Plot domain
+problem.plot_domain('Weight', 'Drag', pareto=[False, False])
