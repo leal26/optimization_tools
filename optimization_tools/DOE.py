@@ -25,7 +25,7 @@ if not in_Abaqus:
     import matplotlib.pyplot as plt
 
 
-class DOE:
+class DOE():
     """Create a Design of Experiences Environment."""
 
     def __init__(self, levels=2, driver='Taguchi', store=False):
@@ -222,7 +222,7 @@ class DOE:
                         self.influences[output_name][-1] += Y[index]/count
     if not in_Abaqus:
         def plot(self, shadow=[], xlabel=None, ylabel=None,
-                 number_y=5, process=None):
+                 number_y=5, process=None, ylimits=None):
             """plots DOE just like in excel.
 
             :param process: dictionary with output_name of outputs to be
@@ -271,7 +271,7 @@ class DOE:
                     current = x0 + i*(self.levels - 1)/norm
                     if self.levels % 2 == 0:  # if even
                         if i == 0:
-                            current += (self.levels - 2)/2./norm
+                            current += (self.levels - 1)/2./norm
                         elif i == 1:
                             current += (self.levels + 1)/2./norm
                         else:
@@ -332,8 +332,11 @@ class DOE:
 #                              (self.levels, self.driver))
 
                 plt.xlim([-border_spacing, max(xi) + border_spacing])
-                plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
-                         max(Y) + 0.05*(max(Y)-min(Y)))
+                if ylimits is None:
+                    plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
+                             max(Y) + 0.05*(max(Y)-min(Y)))
+                else:
+                    plt.ylim(ylimits[output][0], ylimits[output][1])
                 plt.locator_params(axis='y', nbins=number_y)
                 # plt.grid()
 
@@ -603,21 +606,23 @@ class DOE:
                     self.nadir[key] = self.output[key][i]
 
 
-def pareto_frontier(Xs, Ys, maxX=True, maxY=True):
+def pareto_frontier(Xs, Ys, Zs, maxX=True, maxY=True, tol=1e-8):
     # Sort the list in either ascending or descending order of X
-    XY = [[float(Xs[i]), float(Ys[i])] for i in range(len(Xs))]
+    XY = [[float(Xs[i]), float(Ys[i]), float(Zs[i])] for i in range(len(Xs))]
     myList = sorted(XY, reverse=maxX)
 # Start the Pareto frontier with the first value in the sorted list
     p_front = [myList[0]]
 # Loop through the sorted list
     for pair in myList[1:]:
-        if maxY:
-            if pair[1] >= p_front[-1][1]:  # Look for higher values of Y…
-                p_front.append(pair)  # … and add them to the Pareto frontier
-        else:
-            if pair[1] <= p_front[-1][1]:  # Look for lower values of Y…
-                p_front.append(pair)  # … and add them to the Pareto frontier
+        if abs(pair[1] - p_front[-1][1]) > tol:
+            if maxY:
+                if pair[1] >= p_front[-1][1]:  # Look for higher values of Y…
+                    p_front.append(pair)  # … and add them to the Pareto frontier
+            else:
+                if pair[1] <= p_front[-1][1]:  # Look for lower values of Y…
+                    p_front.append(pair)  # … and add them to the Pareto frontier
 # Turn resulting pairs back into a list of Xs and Ys
     p_frontX = [pair[0] for pair in p_front]
     p_frontY = [pair[1] for pair in p_front]
-    return p_frontX, p_frontY
+    p_frontZ = [pair[2] for pair in p_front]
+    return p_frontX, p_frontY, p_frontZ

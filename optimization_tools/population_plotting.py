@@ -7,8 +7,8 @@ Created on Sun Jul 20 21:43:27 2014
 import numpy as np
 import matplotlib.pyplot as plt
 
-from filehandling import output_reader
-from DOE import pareto_frontier
+from optimization_tools.filehandling import output_reader
+from optimization_tools.DOE import pareto_frontier
 
 
 def plot_generations(filename, cost=None, g=None, p=None,
