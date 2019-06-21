@@ -1,9 +1,9 @@
-optimization_tools/DOE_FullFactorial.py
-optimization_tools/DOE_taguchi.py
+README.md
+optimization_tools/DOE.py
+optimization_tools/__init__.py
+optimization_tools/filehandling.py
 optimization_tools/hausdorff_distance.py
-optimization_tools/optimization_tools.py
-optimization_tools/plot_contour.py
-optimization_tools/test.py
+optimization_tools/population_plotting.py
 optimization_tools.egg-info/PKG-INFO
 optimization_tools.egg-info/SOURCES.txt
 optimization_tools.egg-info/dependency_links.txt

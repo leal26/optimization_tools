@@ -222,7 +222,7 @@ class DOE:
                         self.influences[output_name][-1] += Y[index]/count
     if not in_Abaqus:
         def plot(self, shadow=[], xlabel=None, ylabel=None,
-                 number_y=5, process=None):
+                 number_y=5, process=None, ylimits=None):
             """plots DOE just like in excel.
 
             :param process: dictionary with output_name of outputs to be
@@ -332,8 +332,11 @@ class DOE:
 #                              (self.levels, self.driver))
 
                 plt.xlim([-border_spacing, max(xi) + border_spacing])
-                plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
-                         max(Y) + 0.05*(max(Y)-min(Y)))
+                if ylimits is None:
+                    plt.ylim(min(Y) - 0.05*(max(Y)-min(Y)),
+                             max(Y) + 0.05*(max(Y)-min(Y)))
+                else:
+                    plt.ylim(ylimits[output][0], ylimits[output][1])
                 plt.locator_params(axis='y', nbins=number_y)
                 # plt.grid()
 
